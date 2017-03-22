@@ -32,6 +32,13 @@ if (cond)                       \
 double randomNumber();
 void* count(void*);
 
+
+/*
+ * using Monte Carlo method to calculate pi value
+ *
+*******/
+
+
 int main(int argc, char** argv)
 {
     IF_COND_EXIT(argc != 3, "Usage: ./a.out number_of_toss number_of_thread\n", 0);
@@ -61,6 +68,13 @@ int main(int argc, char** argv)
     return 0;
 }
 
+
+/*
+ * count the number of point existing in the circle
+ *
+ * **/
+
+
 void* count(void* threadId) 
 {
     double x, y;
@@ -87,6 +101,13 @@ void* count(void* threadId)
     pthread_mutex_unlock(&mutex);
     return (void*)NULL;
 }
+
+
+/*
+ * Generate random number using c++11
+ *
+****/
+
 
 #include <random>
 
