@@ -11,5 +11,12 @@ fi
 echo "Compile $program ..."
 echo "Run command: $CC $program $FLAGS"
 $($CC $program $FLAGS)
+
+compile_code=$?
+if [ $compile_code != 0 ]; then
+    echo "Error! Error code = $compile_code"
+    exit $compile_code
+fi
+
 echo "Finished!"
 
