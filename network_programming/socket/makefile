@@ -11,5 +11,5 @@ client:
 	$(CC) $(LIB_FILEs) $(Client) $(FLAGS) -o client
 
 clean:
-	rm server client *.h.gch
+	rm server client
 

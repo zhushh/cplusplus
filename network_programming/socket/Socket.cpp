@@ -1,16 +1,15 @@
-#ifdef WIN32
+#ifdef _WIN32
 #include "stdafx.h"
 #endif
 
 #include "Socket.h"
-
 
 // init sockaddr_in 
 void Init_sockAddr_in(struct sockaddr_in& sock_addr, char* ip, int port) {
     memset(&sock_addr, 0, sizeof(sockaddr_in));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_port = htons(port);
-    #ifdef WIN32
+    #ifdef _WIN32
     sock_addr.sin_addr.S_un.S_addr = inet_addr(ip);
     #else
     sock_addr.sin_addr.s_addr = inet_addr(ip);
@@ -36,8 +35,7 @@ bool Socket::sendSTR(string& str) {
 bool Socket::recvSTR(string& str) {
     int len = BUFSIZE;
     char buf[BUFSIZE + 1];
-    int retVal = 0; 
-    retVal = recv(local_sock, buf, len, 0);
+    int retVal = recv(local_sock, buf, len, 0);
 
     if (retVal == SOCKET_ERROR) {
         return false;
@@ -81,10 +79,19 @@ bool Server::isAccepted() {
     remote_sock = accept(local_sock, (sockaddr*)&remote_addr, &addrlen);
     IF_COND_PRINT_AND_EXIT(remote_sock == SOCKET_ERROR, "Accept client fail!\n", -1);
 
+
+    #ifdef __linux__
+    time_t rawtime;
+    struct tm* timeInfo;
+    time(&rawtime);
+    timeInfo = localtime(&rawtime);
+    printf("%s", asctime(timeInfo));
+    #endif
+
     printf("Accept from %s\n", inet_ntoa(remote_addr.sin_addr));
+
     return true;
 }
-
 
 Client::Client() {}
 Client::Client(char* ip, int port) { InitSocket(ip, port); }

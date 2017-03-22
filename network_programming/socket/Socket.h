@@ -2,7 +2,7 @@
 #define __SOCKET__
 
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #include <WinSock2.h>
 #include <stdio.h>
@@ -20,6 +20,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #include <stdio.h>
 #include <stdlib.h>
