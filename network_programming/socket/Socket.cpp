@@ -79,7 +79,7 @@ bool Server::isAccepted() {
 
     // accepting
     remote_sock = accept(local_sock, (sockaddr*)&remote_addr, &addrlen);
-    IF_COND_PRINT_AND_EXIT(remote_sock < 0, "Accept client fail!\n", -1);
+    IF_COND_PRINT_AND_EXIT(remote_sock == SOCKET_ERROR, "Accept client fail!\n", -1);
 
     printf("Accept from %s\n", inet_ntoa(remote_addr.sin_addr));
     return true;
