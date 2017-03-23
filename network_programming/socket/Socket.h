@@ -1,18 +1,6 @@
 #ifndef __SOCKET__
 #define __SOCKET__
 
-
-#ifdef _WIN32
-
-#include <WinSock2.h>
-#include <stdio.h>
-#include <Windows.h>
-
-/* 要使用winsock API，就要包含ws2_32.lib这个库 */
-#pragma comment(lib, "ws2_32.lib")
-
-#else
-
 #include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -26,26 +14,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define INVALID_SOCKET          (~0)
-#define SOCKET_ERROR            (-1)
-
-#define closesocket close 
-
-#endif
-
 #include <iostream>
 #include <string>
 using namespace std;
 
+#define SOCKET_ERROR            (-1)
+#define BUFSIZE                 4096
+#define DEFAULT_IP              "127.0.0.1"
 
-#define BUFSIZE     4096
-#define DEFAULT_IP  "127.0.0.1"
-
-#define IF_COND_PRINT(cond, str) if (cond) { printf("%s", str); }
-#define IF_COND_EXIT(cond, status) if (cond) { exit(status); }
+#define closesocket close 
 #define IF_COND_PRINT_AND_EXIT(cond, str, status) \
 if (cond) { printf("%s", str); exit(status); }
-
 
 void Init_sockAddr_in(struct sockaddr_in& s, char* ip, int port);
 
@@ -54,9 +33,12 @@ public:
     bool sendSTR(string&);
     bool recvSTR(string&);
     virtual void InitSocket(char*, int) = 0;
+
+    int getLocalSock() const;
+    int getRemoteSock() const;
 protected:
-    unsigned int local_sock;
-    unsigned int remote_sock;
+    int local_sock;
+    int remote_sock;
 };
 
 class Server : public Socket {
@@ -65,6 +47,7 @@ public:
     Server(char*, int);
     ~Server();
     bool isAccepted();
+    std::string getRemoteAddr() const;
     virtual void InitSocket(char*, int);
 private:
     struct sockaddr_in remote_addr;

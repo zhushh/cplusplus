@@ -1,7 +1,3 @@
-#ifdef _WIN32
-#include "stdafx.h"
-#endif
-
 #include "Socket.h"
 
 // init sockaddr_in 
@@ -9,11 +5,7 @@ void Init_sockAddr_in(struct sockaddr_in& sock_addr, char* ip, int port) {
     memset(&sock_addr, 0, sizeof(sockaddr_in));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_port = htons(port);
-    #ifdef _WIN32
-    sock_addr.sin_addr.S_un.S_addr = inet_addr(ip);
-    #else
     sock_addr.sin_addr.s_addr = inet_addr(ip);
-    #endif
 }
 
 bool Socket::sendSTR(string& str) {
@@ -22,7 +14,7 @@ bool Socket::sendSTR(string& str) {
 
     while (len > 0) {
         int i = send(remote_sock, ptr, len, 0);
-        if (i == SOCKET_ERROR) {
+        if (i < 0) {
             return false;
         }
         ptr += i;
@@ -37,13 +29,21 @@ bool Socket::recvSTR(string& str) {
     char buf[BUFSIZE + 1];
     int retVal = recv(local_sock, buf, len, 0);
 
-    if (retVal == SOCKET_ERROR) {
+    if (retVal <= 0) {
         return false;
     }
 
     buf[retVal] = '\0';
     str = string(buf);
     return true; 
+}
+
+int Socket::getLocalSock() const {
+    return local_sock;
+}
+
+int Socket::getRemoteSock() const {
+    return remote_sock;
 }
 
 Server::Server(int port) { InitSocket(DEFAULT_IP, port); }
@@ -54,7 +54,7 @@ void Server::InitSocket(char* ip, int port) {
     printf("Start InitSocket\n");
 
     local_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    IF_COND_PRINT_AND_EXIT(local_sock == INVALID_SOCKET, "Create socket fail!\n", -1);
+    IF_COND_PRINT_AND_EXIT(local_sock < 0, "Create socket fail!\n", -1);
 
     // init sockaddr_in 
     struct sockaddr_in serv_addr;
@@ -62,12 +62,12 @@ void Server::InitSocket(char* ip, int port) {
 
     // binding
     int retVal = bind(local_sock, (sockaddr*)&serv_addr, sizeof(serv_addr));
-    IF_COND_PRINT_AND_EXIT(retVal == SOCKET_ERROR, "Bind socket fail!\n", -1);
+    IF_COND_PRINT_AND_EXIT(retVal < 0, "Bind socket fail!\n", -1);
 
     printf("Binding succeed!\n");
 
     // listening
-    IF_COND_PRINT_AND_EXIT(listen(local_sock, 10) == SOCKET_ERROR, "Listening fail!\n", -1);
+    IF_COND_PRINT_AND_EXIT(listen(local_sock, 10) < 0, "Listening fail!\n", -1);
     printf("Server %d is listening...\n", port);
 }
 
@@ -77,20 +77,14 @@ bool Server::isAccepted() {
 
     // accepting
     remote_sock = accept(local_sock, (sockaddr*)&remote_addr, &addrlen);
-    IF_COND_PRINT_AND_EXIT(remote_sock == INVALID_SOCKET, "Accept client fail!\n", -1);
-
-
-    #ifdef __linux__
-    time_t rawtime;
-    struct tm* timeInfo;
-    time(&rawtime);
-    timeInfo = localtime(&rawtime);
-    printf("%s", asctime(timeInfo));
-    #endif
-
-    printf("Accept from %s\n", inet_ntoa(remote_addr.sin_addr));
+    // IF_COND_PRINT_AND_EXIT(remote_sock < 0, "Accept client fail!\n", -1);
+    if (remote_sock < 0) { return false; }
 
     return true;
+}
+
+std::string Server::getRemoteAddr() const {
+    return std::string(inet_ntoa(remote_addr.sin_addr));
 }
 
 Client::Client() {}
@@ -99,7 +93,7 @@ Client::~Client() { closesocket(remote_sock); }
 
 void Client::InitSocket(char* ip, int port) {
     remote_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    IF_COND_PRINT_AND_EXIT(remote_sock == INVALID_SOCKET, "Create socket fail!\n", -1);
+    IF_COND_PRINT_AND_EXIT(remote_sock < 0, "Create socket fail!\n", -1);
 
     // init sockaddr_in
     struct sockaddr_in serv_addr;
@@ -107,6 +101,6 @@ void Client::InitSocket(char* ip, int port) {
 
     // connecting
     int retVal = connect(remote_sock, (sockaddr*)&serv_addr, sizeof(serv_addr));
-    IF_COND_PRINT_AND_EXIT(retVal == SOCKET_ERROR, "Connect to server fail!\n", -1);
+    IF_COND_PRINT_AND_EXIT(retVal < 0, "Connect to server fail!\n", -1);
     printf("Connect to server %s:%d succeed!\n", ip, port);
 }

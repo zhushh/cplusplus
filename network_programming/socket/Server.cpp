@@ -16,6 +16,8 @@ int main()
 
     while (s.isAccepted())
     {
+        std::cout << "Accepted from " << s.getRemoteAddr() << std::endl;
+
         // do something here
         string cmd;
         while (s.recvSTR(cmd))
