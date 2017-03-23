@@ -77,7 +77,7 @@ bool Server::isAccepted() {
 
     // accepting
     remote_sock = accept(local_sock, (sockaddr*)&remote_addr, &addrlen);
-    IF_COND_PRINT_AND_EXIT(remote_sock == SOCKET_ERROR, "Accept client fail!\n", -1);
+    IF_COND_PRINT_AND_EXIT(remote_sock == INVALID_SOCKET, "Accept client fail!\n", -1);
 
 
     #ifdef __linux__
