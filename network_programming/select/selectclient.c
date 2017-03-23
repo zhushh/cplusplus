@@ -58,22 +58,24 @@ int main(int argc, char const *argv[])
         exit(2);
     }
 
+    int nbytes;
+    char buf[BUFLEN];
+
+    // the read_fds need initialization each time
     fd_set master;
     fd_set read_fds;
     FD_ZERO(&master);
     FD_SET(STDIN, &master);
     FD_SET(fd, &master);
 
-    int nbytes;
-    char buf[BUFLEN];
-
     for (;;) {
         read_fds = master;
+
         if (select(fd+1, &read_fds, NULL, NULL, NULL) == -1) {
             perror("select");
             exit(3);
         }
-   
+
         if (FD_ISSET(STDIN, &read_fds)) {
             fgets(buf, sizeof(buf), stdin);
             nbytes = strlen(buf);
