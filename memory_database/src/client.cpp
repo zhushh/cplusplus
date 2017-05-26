@@ -33,6 +33,7 @@ int main() {
     }
 
     char buff[BUFFER_SIZE];
+    printf("> ");
     while (fgets(buff, BUFFER_SIZE, stdin)) {
         buff[strlen(buff) - 1] = '\0';
         if (strncmp(buff, "quit", 4) == 0) {
@@ -54,6 +55,8 @@ int main() {
             buff[nbytes] = '\0';
             printf("Response: %s\n", buff);
         }
+
+        printf("> ");
     }
 
     close(fd);

@@ -21,25 +21,18 @@
 #define DEFAULT_PORT    8889
 #define BUFFER_SIZE     4096
 
+int init_shared_data();
 int socket_bind(const char* ip, int port);
 int do_accept(int listener);
-void do_request(int fd);
+int do_request(int data[], const char* request, char* reponse);
+void handle_client(int fd);
 
 int main(int argc, char** argv) {
     int shmid;
-    // create share data
-    shmid = shmget((key_t)SHARE_KEY, SHARE_SIZE * sizeof(int), SHARE_MODE|IPC_CREAT);
+    shmid = init_shared_data();
     if (shmid < 0) {
-        perror("shmget");
         exit(1);
     }
-
-    int *data = (int*)shmat(shmid, 0, 0);
-    if (data == (void*)-1) {
-        perror("shmat");
-        exit(1);
-    }
-    data[0] = 0;    // init array data size
 
     int listener;
     int clientFd;
@@ -55,7 +48,8 @@ int main(int argc, char** argv) {
             perror("fork");
             break;
         } else if (pid == 0) {  // child
-            do_request(clientFd);
+            close(listener);
+            handle_client(clientFd);
             break;
         } else {    // parent
             continue;
@@ -70,6 +64,22 @@ int main(int argc, char** argv) {
         }
     }
     return 0;
+}
+
+int init_shared_data() {
+    int shmid = shmget((key_t)SHARE_KEY, SHARE_SIZE * sizeof(int), SHARE_MODE|IPC_CREAT);
+    if (shmid < 0) {
+        perror("shmget");
+        return -1;
+    }
+
+    int *data = (int*)shmat(shmid, 0, 0);
+    if (data == (void*)-1) {
+        perror("shmat");
+        return -1;
+    }
+    data[0] = 0;    // init array data size
+    return shmid;
 }
 
 int socket_bind(const char* ip, int port) {
@@ -96,6 +106,9 @@ int socket_bind(const char* ip, int port) {
         return -1;
     }
 
+    printf("server start listening on %s:%d\n", ip, port);
+    fflush(stdout);
+
     return fd;
 }
 
@@ -114,7 +127,65 @@ int do_accept(int listener) {
     return newfd;
 }
 
-void do_request(int client) {
+int do_request(int data[], const char* request, char* response) {
+    int i, n;
+    n = data[0];
+
+    if (request[0] == 'P') {
+        sprintf(response, "%s: to be continue", request);
+    } else if (request[0] != 'A' && request[0] != 'G' && request[0] != 'D') {
+        sprintf(response, "%s: Undefined", request);
+    } else {
+        char opName;
+        int opNum;
+        sscanf(request, "%c[%d]", &opName, &opNum);
+        switch(opName) {
+                case 'A':
+                    for (i = 1; i <= n; i++) {
+                        if (data[i] >= opNum) break;
+                    }
+                    if (i > n || data[i] > opNum) {
+                        data[0]++;      // array size increment
+                        while (n >= i) {
+                            data[n+1] = data[n];
+                            n--;
+                        }
+                        data[i] = opNum;
+                        sprintf(response, "%s: success", request);
+                    } else {
+                        sprintf(response, "%d exits", opNum);
+                    }
+                    break;
+                case 'G':
+                    if (opNum <= 0) {
+                        sprintf(response, "%s: Underflow", request);
+                    } else if (n >= opNum) {
+                        sprintf(response, "%d", data[opNum]);
+                    } else {
+                        sprintf(response, "%s: Overflow", request);
+                    }
+                    break;
+                case 'D':
+                    for (i = 1; i <= n; i++) {
+                        if (data[i] >= opNum) break;
+                    }
+                    if (i <= n && data[i] == opNum) {
+                        data[0]--;
+                        while (i < n) {
+                            data[i] = data[i+1];
+                            i++;
+                        }
+                        sprintf(response, "%s: success", request);
+                    } else {
+                        sprintf(response, "%d: does not exits", opNum);
+                    }
+        }
+    }
+
+    return strlen(response);
+}
+
+void handle_client(int client) {
     int shmid;
     int *data;
     shmid = shmget((key_t)SHARE_KEY, 0, SHARE_MODE);
@@ -136,61 +207,7 @@ void do_request(int client) {
         buffer[nbytes] = '\0';
         printf("client %d: %s\n", client, buffer);
         // sprintf(answer, "Server get: %s", buffer);
-        if (buffer[0] == 'P') {
-            sprintf(answer, "%s: to be continue", buffer);
-        } else if (buffer[0] == 'A' || buffer[0] == 'G' || buffer[0] == 'D') {
-            char opName;
-            int opNum;
-            sscanf(buffer, "%c[%d]", &opName, &opNum);
-
-            int i;
-            int n = data[0];
-            switch(opName) {
-                case 'A':
-                    for (i = 1; i <= n; i++) {
-                        if (data[i] >= opNum) break;
-                    }
-                    if (i > n || data[i] > opNum) {
-                        data[0]++;      // array size increment
-                        n++;
-                        while (n > i) {
-                            data[n] = data[n-1];
-                            n--;
-                        }
-                        data[i] = opNum;
-                        sprintf(answer, "%s: success", buffer);
-                    } else {
-                        sprintf(answer, "%d exits", opNum);
-                    }
-                    break;
-                case 'G':
-                    if (opNum <= 0) {
-                        sprintf(answer, "%s: Underflow", buffer);
-                    } else if (n >= opNum) {
-                        sprintf(answer, "%d", data[opNum]);
-                    } else {
-                        sprintf(answer, "%s: Overflow", buffer);
-                    }
-                    break;
-                case 'D':
-                    for (i = 1; i <= n; i++) {
-                        if (data[i] >= opNum) break;
-                    }
-                    if (i <= n && data[i] == opNum) {
-                        data[0]--;
-                        while (i < n) {
-                            data[i] = data[i+1];
-                            i++;
-                        }
-                        sprintf(answer, "%s: success", buffer);
-                    } else {
-                        sprintf(answer, "%d: does not exits", opNum);
-                    }
-            }
-        } else {
-            sprintf(answer, "Undefined: %s", buffer);
-        }
-
+        nbytes = do_request(data, buffer, answer);
         nbytes = send(client, answer, strlen(answer), 0);
     }
 
