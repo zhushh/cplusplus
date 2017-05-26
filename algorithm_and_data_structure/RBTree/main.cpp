@@ -35,6 +35,7 @@ int main() {
             RBTreePrint(t);
         }
     }
+
     RBTreeFree(t);
     return 0;
 }

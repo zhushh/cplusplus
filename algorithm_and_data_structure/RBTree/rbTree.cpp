@@ -28,12 +28,14 @@ void RBTreeFree(RBTree* T) {
 }
 
 void LeftRotate(RBTree* T, TNode* x) {
+    // x will be the left child of y
     TNode* y = x->right;
     x->right = y->left;
     if (y->left != T->nil) {
         y->left->p = x->right;
     }
 
+    // the parent of y will be the parent of x
     y->p = x->p;
     if (x->p == T->nil) {
         T->root = y;
@@ -43,17 +45,20 @@ void LeftRotate(RBTree* T, TNode* x) {
         x->p->right = y;
     }
 
+    // x will the left child of y
     y->left = x;
     x->p = y;
 }
 
 void RightRotate(RBTree* T, TNode* y) {
+    // y will be the right child of x
     TNode* x = y->left;
     y->left = x->right;
     if (x->right != T->nil) {
         x->right->p = y;
     }
 
+    // the parent of x will be the parent of y
     x->p = y->p;
     if (y->p == T->nil) {
         T->root = x;
@@ -63,6 +68,7 @@ void RightRotate(RBTree* T, TNode* y) {
         y->p->right = x;
     }
 
+    // y will be the right child of x
     x->right = y;
     y->p = x;
 }
@@ -71,8 +77,9 @@ void RBTreeInsert(RBTree* T, TNode* z) {
     TNode* x = T->root;
     TNode* y = T->nil;
 
+    // find the position that z should be inserted
     while (x != T->nil) {
-        y = x;
+        y = x;      // record the parent of the position of z
         if (x->key < z->key) {
             x = x->right;
         } else {
@@ -80,6 +87,7 @@ void RBTreeInsert(RBTree* T, TNode* z) {
         }
     }
 
+    // insert z to the tree
     z->color = RED;
     if (y == T->nil) {
         T->root = z;
@@ -90,27 +98,29 @@ void RBTreeInsert(RBTree* T, TNode* z) {
     }
     z->p = y;
     z->left = z->right = T->nil;
+
+    // balance the tree
     RBTreeInsertFixup(T, z);
 }
 
 void RBTreeInsertFixup(RBTree* T, TNode* z) {
     while (z->p->color == RED) {
-        if (z->p == z->p->p->left) {
+        if (z->p == z->p->p->left) {    // left case
             TNode* y = z->p->p->right;
-            if (y->color == RED) {
+            if (y->color == RED) {              // case 1
                 z->p->color = BLACK;
                 y->color = BLACK;
                 z->p->p->color = RED;
                 z = z->p->p;
-            } else if (z == z->p->right) {
+            } else if (z == z->p->right) {      // case 2
                 z = z->p;
                 LeftRotate(T, z);
-            } else {
+            } else {                            // case 3
                 z->p->color = BLACK;
                 z->p->p->color = RED;
                 RightRotate(T, z->p->p);
             }
-        } else {
+        } else {        // right case
             TNode* y = z->p->p->left;
             if (y->color == RED) {
                 z->p->color = BLACK;
