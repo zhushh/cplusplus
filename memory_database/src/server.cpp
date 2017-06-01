@@ -46,23 +46,21 @@ int main(int argc, char** argv) {
     while ((clientFd = do_accept(listener)) != -1) {
         if ((pid = fork()) < 0) {
             perror("fork");
-            break;
+            exit(1);
         } else if (pid == 0) {  // child
             close(listener);
             handle_client(clientFd);
-            break;
-        } else {    // parent
-            continue;
+            close(clientFd);
+            exit(0);
         }
     }
 
-    if (pid > 0) {
-        close(listener);
-        if (shmctl(shmid, IPC_RMID, 0) < 0) {
-            perror("shmctl");
-            exit(1);
-        }
+    close(listener);
+    if (shmctl(shmid, IPC_RMID, 0) < 0) {
+        perror("shmctl");
+        exit(1);
     }
+
     return 0;
 }
 
@@ -121,6 +119,7 @@ int do_accept(int listener) {
 
     if (newfd == -1) {
         perror("accept");
+        return -1;
     }
 
     printf("server: new connection from %s on socket %d\n", inet_ntoa(remoteaddr.sin_addr), newfd);
@@ -138,47 +137,50 @@ int do_request(int data[], const char* request, char* response) {
     } else {
         char opName;
         int opNum;
-        sscanf(request, "%c[%d]", &opName, &opNum);
-        switch(opName) {
-                case 'A':
-                    for (i = 1; i <= n; i++) {
-                        if (data[i] >= opNum) break;
-                    }
-                    if (i > n || data[i] > opNum) {
-                        data[0]++;      // array size increment
-                        while (n >= i) {
-                            data[n+1] = data[n];
-                            n--;
+        if (sscanf(request, "%c[%d]", &opName, &opNum) != 2) {
+            sprintf(response, "%s: error", request);
+        } else {
+            switch(opName) {
+                    case 'A':
+                        for (i = 1; i <= n; i++) {
+                            if (data[i] >= opNum) break;
                         }
-                        data[i] = opNum;
-                        sprintf(response, "%s: success", request);
-                    } else {
-                        sprintf(response, "%d exits", opNum);
-                    }
-                    break;
-                case 'G':
-                    if (opNum <= 0) {
-                        sprintf(response, "%s: Underflow", request);
-                    } else if (n >= opNum) {
-                        sprintf(response, "%d", data[opNum]);
-                    } else {
-                        sprintf(response, "%s: Overflow", request);
-                    }
-                    break;
-                case 'D':
-                    for (i = 1; i <= n; i++) {
-                        if (data[i] >= opNum) break;
-                    }
-                    if (i <= n && data[i] == opNum) {
-                        data[0]--;
-                        while (i < n) {
-                            data[i] = data[i+1];
-                            i++;
+                        if (i > n || data[i] > opNum) {
+                            data[0]++;      // array size increment
+                            while (n >= i) {
+                                data[n+1] = data[n];
+                                n--;
+                            }
+                            data[i] = opNum;
+                            sprintf(response, "%s: success", request);
+                        } else {
+                            sprintf(response, "%d exits", opNum);
                         }
-                        sprintf(response, "%s: success", request);
-                    } else {
-                        sprintf(response, "%d: does not exits", opNum);
-                    }
+                        break;
+                    case 'G':
+                        if (opNum <= 0) {
+                            sprintf(response, "%s: Underflow", request);
+                        } else if (n >= opNum) {
+                            sprintf(response, "%d", data[opNum]);
+                        } else {
+                            sprintf(response, "%s: Overflow", request);
+                        }
+                        break;
+                    case 'D':
+                        for (i = 1; i <= n; i++) {
+                            if (data[i] >= opNum) break;
+                        }
+                        if (i <= n && data[i] == opNum) {
+                            data[0]--;
+                            while (i < n) {
+                                data[i] = data[i+1];
+                                i++;
+                            }
+                            sprintf(response, "%s: success", request);
+                        } else {
+                            sprintf(response, "%d: does not exits", opNum);
+                        }
+            }
         }
     }
 
@@ -199,16 +201,16 @@ void handle_client(int client) {
         exit(2);
     }
 
-    char buffer[BUFFER_SIZE];
-    char answer[BUFFER_SIZE];
+    char recvmesg[BUFFER_SIZE];
+    char respmesg[BUFFER_SIZE];
     int nbytes = 0;
 
-    while ((nbytes = recv(client, buffer, sizeof(buffer), 0)) > 0) {
-        buffer[nbytes] = '\0';
-        printf("client %d: %s\n", client, buffer);
-        // sprintf(answer, "Server get: %s", buffer);
-        nbytes = do_request(data, buffer, answer);
-        nbytes = send(client, answer, strlen(answer), 0);
+    while ((nbytes = recv(client, recvmesg, sizeof(recvmesg), 0)) > 0) {
+        recvmesg[nbytes] = '\0';
+        printf("client %d: %s\n", client, recvmesg);
+        // sprintf(respmesg, "Server get: %s", recvmesg);
+        nbytes = do_request(data, recvmesg, respmesg);
+        nbytes = send(client, respmesg, strlen(respmesg), 0);
     }
 
     if (nbytes < 0) {
