@@ -1,5 +1,5 @@
 ## Tweetable Mathematical Art
-替换三个函数的实现，然后生成一个1024x1024大小的图片
+替换**RD**、 **GR**和**BL**三个函数的实现，然后生成一个1024x1024大小的图片
 
 代码框架：`painting.cpp`
 ```c++
