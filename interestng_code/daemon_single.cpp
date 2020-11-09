@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  // 加锁，LOCK_NB 参数表示非阻塞模式，如果文件被其他进程加所，会返回错误
+  // 加锁，LOCK_NB 参数表示非阻塞模式，如果文件被其他进程加锁，会返回错误
   int ret = flock(lock_fd, LOCK_EX | LOCK_NB);
   if (ret < 0)
   {
